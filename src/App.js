@@ -7,6 +7,7 @@ function App() {
   const [responseData, setResponseData] = useState({ capital: [], lower: [] });
   const inputRef = useRef(null);
 
+
   useEffect(() => {
     const ws = new WebSocket('wss://ws.postman-echo.com/raw');
 
@@ -14,34 +15,32 @@ function App() {
       console.log("Connected!");
     })
 
-    ws.addEventListener('message', ({data}) => {
+    ws.addEventListener('message', ({ data }) => {
       console.log(data);
-      //make a copy of the responseData object
-      const responseDataCopy = { ...responseData };
-      //ignore the empty messages
-      if (data && data.trim() !== "") {
-        if (data.charAt(0) === data.charAt(0).toLowerCase()) {
-          responseDataCopy.lower = [...responseDataCopy.lower, data];
-        } else {
-          responseDataCopy.capital = [...responseDataCopy.capital, data];
+      setResponseData((prevData) => {
+        const responseDataCopy = { ...prevData };
+        if (data && data.trim() !== "") {
+          if (data.charAt(0) === data.charAt(0).toLowerCase()) {
+            responseDataCopy.lower = [...responseDataCopy.lower, data];
+          } else {
+            responseDataCopy.capital = [...responseDataCopy.capital, data];
+          }
         }
-      }
-
-      setResponseData(responseDataCopy);
+        return responseDataCopy;
+      });
       setInput('');
-
       if (inputRef.current) {
         inputRef.current.focus();
       }
-
-    })
+    });
 
     setSocket(ws);
 
     return () => {
       ws.close();
-    }
-  }, [responseData]);
+    };
+  }, []);
+
 
   const handleInput = (e) => {
     setInput(e.target.value);
