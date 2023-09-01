@@ -3,22 +3,28 @@ import React, { useEffect, useState, useRef } from 'react';
 
 function App() {
   const [value, setInput] = useState('');
-  const [socket, setSocket] = useState(null);
   const [responseData, setResponseData] = useState({ capital: [], lower: [] });
-  const inputRef = useRef(null);
 
+  const inputRef = useRef(null);
+  const socketRef = useRef(null);
 
   useEffect(() => {
     const ws = new WebSocket('wss://ws.postman-echo.com/raw');
 
-    ws.addEventListener("open", () => {
-      console.log("Connected!");
-    })
+    ws.onopen = () => { console.log("Connected!") }
 
-    ws.addEventListener('message', ({ data }) => {
-      console.log(data);
-      setResponseData((prevData) => {
-        const responseDataCopy = { ...prevData };
+    socketRef.current = ws;
+
+    return () => {
+      ws.close();
+    }
+  }, []);
+
+  useEffect(() => {
+    if (socketRef.current) {
+      socketRef.current.onmessage = ({ data }) => {
+        console.log(data);
+        const responseDataCopy = { ...responseData };
         if (data && data.trim() !== "") {
           if (data.charAt(0) === data.charAt(0).toLowerCase()) {
             responseDataCopy.lower = [...responseDataCopy.lower, data];
@@ -26,21 +32,16 @@ function App() {
             responseDataCopy.capital = [...responseDataCopy.capital, data];
           }
         }
-        return responseDataCopy;
-      });
-      setInput('');
-      if (inputRef.current) {
-        inputRef.current.focus();
-      }
-    });
 
-    setSocket(ws);
+        setResponseData(responseDataCopy);
+        setInput('');
+        if (inputRef.current) {
+          inputRef.current.focus();
+        }
 
-    return () => {
-      ws.close();
-    };
-  }, []);
-
+      };
+    }
+  }, [responseData]);
 
   const handleInput = (e) => {
     setInput(e.target.value);
@@ -48,10 +49,9 @@ function App() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log(value);
 
-    if (socket && socket.readyState === WebSocket.OPEN) {
-      socket.send(value);
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(value);
     }
   };
 
